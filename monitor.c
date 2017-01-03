@@ -298,25 +298,33 @@ void scanParameters(const uint8_t *data,u_char *ssid,u_char *psk,int payload_len
         repeat=1;
         u_char *vendor_specific;
         int data_type;
-        u_char *wids_data;
+        uint8_t *iv;
+        uint8_t *wids_data;
         while(i<=payload_length-4&&repeat==1){ /* Last 4 bytes are Frame Check Sequence (FCS) */
             if((uint8_t)data[i]==221){ /* Vendor Specific (221) */
                 tag_length=(uint8_t)data[i+1];
-                if((uint8_t)data[i+2]==170&&(uint8_t)data[i+3]==170&&(uint8_t)data[i+4]==170){ /* OUI: AA-AA-AA */
-                    data_type=(uint8_t)data[i+5];
-                    wids_data=(u_char*)malloc((tag_length-4)*sizeof(u_char)+1);
-                    memcpy(wids_data,data+i+2+4,tag_length-4);
-                    memcpy(wids_data+tag_length+i+2+4,"\0",1);
+                if(tag_length==3+16+128){
+                    if((uint8_t)data[i+2]==170&&(uint8_t)data[i+3]==170&&(uint8_t)data[i+4]==170){ /* OUI: AA-AA-AA */
+                        /* IV */
+                        iv=(uint8_t*)malloc(16*sizeof(uint8_t));
+                        memcpy(iv,data+i+2+3,16);
+                        /* Encrypted data */
+                        wids_data=(uint8_t*)malloc(128*sizeof(uint8_t));
+                        memcpy(wids_data,data+i+2+3+16,128);
+                        /* Save wids-related cpatured data */
+                        printf("Found something\n");
 
-                    /* Save wids-related cpatured data */
-                    printf("Found something\n");
-
-                    repeat=0;
-                    free(ssid_scanned);
-                    free(wids_data);
+                        ///
+                        repeat=0;
+                        free(ssid_scanned);
+                        free(wids_data);
+                    }
+                    else{
+                        /* Ignore other OUIs */
+                    }
                 }
                 else{
-                    /* Ignore other OUIs */
+                    /* Ignore invalid-length OUI tags */
                 }
             }
             else{
