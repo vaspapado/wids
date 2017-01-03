@@ -102,6 +102,7 @@ int main(int argc,char *argv[]){
     char **optionValues;
     char *mode;
     char *ssid;
+    char *pskfile;
     char *psk;
     if(argc==1){
         printHelp();
@@ -147,10 +148,31 @@ int main(int argc,char *argv[]){
                         exit(1);
                     }
                 }
-                else if(strcmp(options[i],"-psk")==0){
-                    psk=(char*)malloc(strlen(optionValues[i])+1);
-                    memcpy(psk,optionValues[i],strlen(optionValues[i]));
-                    memcpy(psk+strlen(optionValues[i]),"\0",1);
+                else if(strcmp(options[i],"-pskfile")==0){
+                    pskfile=(char*)malloc(strlen(optionValues[i])+1);
+                    memcpy(pskfile,optionValues[i],strlen(optionValues[i]));
+                    memcpy(pskfile+strlen(optionValues[i]),"\0",1);
+
+                    FILE *file;
+                    file=fopen(pskfile,"rb");
+                    if(file!=NULL){
+                        fseek(file,0,SEEK_END);
+                        int fileSize=ftell(file);
+                        if(fileSize==128){
+                            rewind(file);
+                            psk=(char*)malloc(128*sizeof(char));
+                            fread(psk,1,fileSize,file);
+                            fclose(file);
+                        }
+                        else{
+                            fprintf(stderr,"Invalid key length!\n");
+                            exit(1);
+                        }
+                    }
+                    else{
+                        fprintf(stderr,"Error reading key file!\n");
+                        exit(1);
+                    }
                 }
                 else{
                     fprintf(stderr,"Wrong command usage!\n");
@@ -307,14 +329,13 @@ uint8_t *getEncryptedData(char *psk,uint8_t *iv,uint8_t *data){
     uint8_t *encrypted_data;
     encrypted_data=(uint8_t*)malloc(128*sizeof(uint8_t));
 
+    //
     uint8_t *_data;
     _data=(uint8_t*)malloc(10*sizeof(uint8_t));
-    memcpy(_data,"aaaaaaaaaa",10);
+    memcpy(_data,"VASILIS",7);
+    //
 
-    psk=(uint8_t*)malloc(128*sizeof(uint8_t));
-    memcpy(psk,"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",128);
-
-    AES128_CBC_encrypt_buffer(encrypted_data,_data,10,psk,iv);
+    AES128_CBC_encrypt_buffer(encrypted_data,_data,7,psk,iv);
     return encrypted_data;
 }
 

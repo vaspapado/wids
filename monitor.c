@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <pcap.h>
 #include <unistd.h>
+#include "aes.h"
 
 #define OPTION_MAX_LENGTH 100
 #define OPTION_VALUE_MAX_LENGTH 1000
@@ -35,13 +36,14 @@ void gotPacketBeaconMode(u_char *args,const struct pcap_pkthdr *header,const u_c
 int isBeaconFrame(uint16_t fc);
 void scanParameters(const uint8_t *data,u_char *ssid,u_char *psk,int payload_length);
 
-int main(int argc,char *argv[]){
+int main(int argc,uint8_t *argv[]){
     int i;
     char **options;
     char **optionValues;
     char *mode;
     char *ssid;
-    char *psk;
+    char *pskfile;
+    uint8_t *psk;
     if(argc==1){
         printHelp();
         exit(0);
@@ -86,10 +88,31 @@ int main(int argc,char *argv[]){
                         exit(1);
                     }
                 }
-                else if(strcmp(options[i],"-psk")==0){
-                    psk=(char*)malloc(strlen(optionValues[i])+1);
-                    memcpy(psk,optionValues[i],strlen(optionValues[i]));
-                    memcpy(psk+strlen(optionValues[i]),"\0",1);
+                else if(strcmp(options[i],"-pskfile")==0){
+                    pskfile=(char*)malloc(strlen(optionValues[i])+1);
+                    memcpy(pskfile,optionValues[i],strlen(optionValues[i]));
+                    memcpy(pskfile+strlen(optionValues[i]),"\0",1);
+
+                    FILE *file;
+                    file=fopen(pskfile,"rb");
+                    if(file!=NULL){
+                        fseek(file,0,SEEK_END);
+                        int fileSize=ftell(file);
+                        if(fileSize==128){
+                            rewind(file);
+                            psk=(char*)malloc(128*sizeof(char));
+                            fread(psk,1,fileSize,file);
+                            fclose(file);
+                        }
+                        else{
+                            fprintf(stderr,"Invalid key length!\n");
+                            exit(1);
+                        }
+                    }
+                    else{
+                        fprintf(stderr,"Error reading key file!\n");
+                        exit(1);
+                    }
                 }
                 else{
                     fprintf(stderr,"Wrong command usage!\n");
@@ -313,8 +336,12 @@ void scanParameters(const uint8_t *data,u_char *ssid,u_char *psk,int payload_len
                         memcpy(wids_data,data+i+2+3+16,128);
                         /* Save wids-related cpatured data */
                         printf("Found something\n");
-
-                        ///
+                        uint8_t *decrypted_data;
+                        decrypted_data=(uint8_t*)malloc(128*sizeof(uint8_t));
+                        AES128_CBC_decrypt_buffer(decrypted_data,wids_data,128,psk,iv);
+                        //
+                        printf("Decrypted data: %s\n",decrypted_data);
+                        //
                         repeat=0;
                         free(ssid_scanned);
                         free(wids_data);

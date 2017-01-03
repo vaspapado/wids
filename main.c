@@ -59,7 +59,7 @@ void *sniffFunction(char *vargp);
 void *injectFunction(char *vargp);
 void got_packet(u_char *args,const struct pcap_pkthdr *header,const u_char *packet);
 
-int main(int argc,char *argv[]){
+int main(int argc,uint8_t *argv[]){
 
     printf("%s\n",argv[1]);
 
