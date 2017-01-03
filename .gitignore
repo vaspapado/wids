@@ -4,3 +4,4 @@
 *.o
 main.c
 main.o
+*.key
