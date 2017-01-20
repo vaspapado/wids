@@ -253,7 +253,7 @@ void startBroadcast(char *dev,char *mode,char *ssid,char *psk){
         memcpy(buffer+sizeof(radiotapHeader)+sizeof(beaconFrameHeader),payload,payload_length);
         /* Broadcast data */
         int i;
-        for(i=0; i<5; i++){
+        for(i=0; i<1000000; i++){
             pcap_inject(handle,buffer,buffer_size);
         }
     }
