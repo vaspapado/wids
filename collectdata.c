@@ -33,15 +33,15 @@ typedef struct proccessfilerecord{
 void printHelp();
 void generateForAllProcs();
 void generateForSpecificProcs(char *filename);
-void saveTrainingData(struct syscall **syscalls);
+void saveTrainingData(struct syscall *syscalls,int length);
 int listContains(proc *proclist,int proclistsize,char process[],int *safe);
 
 int main(int argc,char *argv[]){
-    if(argc<4){
+    if(argc<2){
         printHelp();
         exit(0);
     }
-    else if(argc>=4){
+    else if(argc>=2){
         if(strcmp(argv[1],"-training")==0){
             if(strcmp(argv[2],"-allprocs")==0){
                 generateForAllProcs();
@@ -50,12 +50,19 @@ int main(int argc,char *argv[]){
                 generateForSpecificProcs(argv[3]);
             }
             else{
-                //args error
+                fprintf(stderr,"Invalid option \"%s\"\n",argv[2]);
+                exit(1);
             }
         }
         else{
-            //args error
+            fprintf(stderr,"Invalid option \"%s\"\n",argv[1]);
+            exit(1);
         }
+    }
+    else{
+        fprintf(stderr,"Invalid command syntax\n");
+        printHelp();
+        exit(1);
     }
     return 0;
 }
@@ -64,6 +71,8 @@ void printHelp(){
     printf("Note: Run the program with administrator privileges\n");
     printf("Usage: collectdata options\n");
     printf("Options:\n");
+    // ./collectdata -training -allprocs (all procs safe)
+    // ./collectdata -training -procsfile filename (procs.list)
 
     printf("\n");
 }
@@ -77,13 +86,13 @@ void generateForAllProcs(){
     FILE *perfFile;
     struct process *processes;
     struct syscall *syscalls;
+
     /* List all processes and related information */
-    //system("sudo rm -f ps.dat"); // no need to remove file, it gets overwritten afterwards
     //system("sudo ps -A > ps.dat");
     system("sudo ps -A -F > ps.dat");
     psFile=fopen("ps.dat","r");
     if(psFile!=NULL){
-        // 1. Count number of lines(processes) - first line has column names
+        // 1. Count number of lines (processes) - first line has column names
         lines=0;
         while(fgets(dummy,500,psFile)!=NULL){
             lines++;
@@ -104,12 +113,13 @@ void generateForAllProcs(){
             lines++;
         }
         fclose(psFile);
+        system("sudo rm -f ps.dat");
 
         /* Trace syscalls */
         system("sudo perf trace > perf.dat");
         perfFile=fopen("perf.dat","r");
         if(perfFile!=NULL){
-            // 1. Count number of lines(syscalls)
+            // 1. Count number of lines (syscalls)
             lines=0;
             while(fgets(dummy,500,perfFile)!=NULL){
                 lines++;
@@ -146,14 +156,16 @@ void generateForAllProcs(){
                 lines++;
             }
             fclose(perfFile);
-            //saveTrainingData(syscalls);
+            //saveTrainingData(syscalls,lines??????????);
         }
         else{
-            //file error
+            fprintf(stderr,"Error opening file \"perf.dat\"\n");
+            exit(1);
         }
     }
     else{
-        //file error
+        fprintf(stderr,"Error opening file \"ps.dat\"\n");
+        exit(1);
     }
 }
 
@@ -166,17 +178,17 @@ void generateForSpecificProcs(char *filename){
     int temp_pid;
     int safe;
     FILE *proclistfile;
-    FILE *psFile;
     FILE *perfFile;
     proc *proclist;
-    struct process *processes;
-    struct syscall *syscalls;
     int proclistsize;
+    struct syscall *syscalls;
+
     /* List selected processes */
     proclistfile=fopen(filename,"r");
     if(proclistfile!=NULL){
         // 1. Count lines of lines(processes in file)
         line_cnt=0;
+        fgets(dummy,100,proclistfile); // Ignore first line - column names
         while(fgets(dummy,100,proclistfile)!=NULL){
             line_cnt++;
         }
@@ -191,8 +203,9 @@ void generateForSpecificProcs(char *filename){
             line_cnt++;
         }
         fclose(proclistfile);
-        /* List selected processes and related information */
 
+        /* List selected processes and related information */
+        // Needed?
 
         /* Trace syscalls */
         system("sudo perf trace > perf.dat");
@@ -242,14 +255,16 @@ void generateForSpecificProcs(char *filename){
             }
             printf("#syscalls(after applying filter): %d\n",i);
             fclose(perfFile);
-            //saveTrainingData(syscalls);
+            saveTrainingData(syscalls,i);
         }
         else{
-            //file error
+            fprintf(stderr,"Error opening file \"perf.dat\"\n");
+            exit(1);
         }
     }
     else{
-        //file error
+        fprintf(stderr,"Error opening file \"%s\"\n",filename);
+        exit(1);
     }
 }
 
@@ -265,9 +280,27 @@ int listContains(proc *proclist,int proclistsize,char process[],int *safe){
     return 0;
 }
 
-void saveTrainingData(struct syscall **syscalls){
-
-
-
-
+void saveTrainingData(struct syscall *syscalls,int length){
+    int i;
+    FILE *output;
+    output=fopen("training.dat","w");
+    if(output!=NULL){
+        fprintf(output,"Timestamp\tDuration\tProcess\tpid\tSyscall\tSafe\n");
+        for(i=0; i<length; i++){
+            fprintf(output,"%f\t%f\t%s\t%d\t%s\t%d\n",syscalls[i].timestamp,syscalls[i].duration,
+                syscalls[i].process,syscalls[i].pid,syscalls[i].syscall,syscalls[i].safe);
+        }
+        fclose(output);
+        printf("Training set was saved in file \"training.dat\"\n");
+    }
+    else{
+        fprintf(stderr,"Error opening file \"%s\"\n","training.dat");
+        exit(1);
+    }
 }
+
+
+
+
+
+

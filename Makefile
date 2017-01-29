@@ -23,6 +23,9 @@ aes: aes.c aes.h
 
 # ML
 
+mkproclist: mkproclist.c
+	$(CC) -o mkproclist mkproclist.c $(INCLUDES)
+
 collectdata: collectdata.c
 	$(CC) -o collectdata collectdata.c $(INCLUDES)
 
