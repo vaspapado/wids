@@ -208,8 +208,8 @@ void generateForSpecificProcs(char *filename){
         // Needed?
 
         /* Trace syscalls */
-        system("sudo perf trace > perf.dat");
-        perfFile=fopen("perf.dat","r");
+        //system("sudo perf trace > perf.dat");
+        perfFile=fopen("apacheperf.dat","r");
         if(perfFile!=NULL){
             // 1. Count number of lines(syscalls)
             line_cnt=0;
@@ -298,9 +298,3 @@ void saveTrainingData(struct syscall *syscalls,int length){
         exit(1);
     }
 }
-
-
-
-
-
-
