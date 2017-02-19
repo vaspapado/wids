@@ -1,11 +1,11 @@
 CC 		= gcc
 INCLUDES 	= -I /home/vasilis/Desktop/wids
-OBJECTS		= broadcast monitor pskgen test aes
+OBJECTS		= broadcast monitor pskgen aes
 
 build: $(OBJECTS)
 	
 clean:
-	rm -f broadcast monitor pskgen test aes
+	rm -f broadcast monitor pskgen aes mkproclist collectdata
 
 # Comms
 
@@ -13,10 +13,10 @@ broadcast: broadcast.c
 	$(CC) -o broadcast broadcast.c aes.c -lpcap -lpthread $(INCLUDES)
 
 monitor: monitor.c
-	
+	$(CC) -o monitor monitor.c aes.c -lpcap -lpthread $(INCLUDES)
 
 pskgen: pskgen.c
-	$(CC) -o pskgen pskgen.c -lpcap -lpthread $(INCLUDES)
+	$(CC) -o pskgen pskgen.c $(INCLUDES)
 
 aes: aes.c aes.h
 	$(CC) -o aes -c aes.c -Wall -Os -Wl,-Map,test.map $(INCLUDES)
@@ -28,11 +28,5 @@ mkproclist: mkproclist.c
 
 collectdata: collectdata.c
 	$(CC) -o collectdata collectdata.c $(INCLUDES)
-
-# Misc
-
-test: test.c
-	$(CC) -o test test.c -lpcap -lpthread $(INCLUDES)
-
 
 
