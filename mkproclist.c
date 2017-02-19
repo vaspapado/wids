@@ -1,3 +1,20 @@
+
+/*
+    mkproclist
+        1. Makes a list of the processes running
+        2. Marks them as malicious(0) or safe(1)
+        3. Saves the list to a file ("procs.list" by default)
+
+    For example,
+        #   CMD       safe
+            firefox   1
+            mirai     0
+            filezilla 1
+
+    Depends on ps
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -20,12 +37,12 @@ void allProcsSafe();
 void modifyCmd(char *cmd);
 
 int main(int argc,char *argv[]){
-    if(argc<2){ // mkproclist
+    if(argc==1){
         printHelp();
         exit(0);
     }
     else if(argc==2){
-        if(strcmp(argv[1],"-allsafe")==0){ // mkproclist -all
+        if(strcmp(argv[1],"-allsafe")==0){
             allProcsSafe();
         }
         else{
@@ -33,6 +50,7 @@ int main(int argc,char *argv[]){
             exit(1);
         }
     }
+    // TO DO modify this code to take the output file's name as a command line argument
     else{
         fprintf(stderr,"Invalid command syntax\n");
         printHelp();
@@ -46,6 +64,8 @@ void printHelp(){
     printf("Usage: mkproclist options\n");
     printf("Options:\n");
 
+
+    printf("This program depends on 'ps'");
     printf("\n");
 }
 
@@ -57,11 +77,11 @@ void allProcsSafe(){
     struct process *processes;
     FILE *output;
 
-    /* List all processes and related information */
+    // List all processes and related information
     system("sudo ps -A -F > ps.dat");
     psFile=fopen("ps.dat","r");
     if(psFile!=NULL){
-        // 1. Count number of lines (processes) - first line has column names
+        // 1. Count number of lines (processes) - first line contains column names
         cnt=0;
         while(fgets(dummy,500,psFile)!=NULL){
             cnt++;
@@ -69,9 +89,9 @@ void allProcsSafe(){
         printf("#processes: %d\n",(cnt-1));
         processes=(struct process*)malloc((cnt-1)*sizeof(struct process));
         rewind(psFile);
-        // 2. Store process info
+        // 2. Store processes and information
         cnt=0;
-        fgets(dummy,500,psFile); // Ignore first line - column names
+        fgets(dummy,500,psFile); // Ignore first line - contains column names
         while(fgets(dummy,500,psFile)!=NULL){
             sscanf(dummy,"%s %d %d %d %d %d %d %s %s %s %s\n",
                 processes[cnt].uid,&processes[cnt].pid,&processes[cnt].ppid,&processes[cnt].c,&processes[cnt].sz,&processes[cnt].rss,&processes[cnt].psr,
@@ -105,6 +125,8 @@ void allProcsSafe(){
     }
 }
 
+
+/* This function filters the CMD column values of the 'ps -A -F' command */
 void modifyCmd(char *cmd){
     char temp[100];
     int temp_cnt;
@@ -112,7 +134,7 @@ void modifyCmd(char *cmd){
     int last=0;
     int last_offset;
 
-    // Case 1
+    // Case 1 For example, [kworker/0:0] --> kworker/0:0
     if(cmd[0]=='['){
         i=1;
         while(cmd[i]!=']'){
@@ -127,7 +149,7 @@ void modifyCmd(char *cmd){
         }
     }
 
-    // Case 2
+    // Case 2 For example, /usr/sbin/apache --> apache
     if(cmd[0]=='/'){
         last_offset=0;
         i=1;
