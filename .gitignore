@@ -1,0 +1,5 @@
+*.o
+*.key
+*.list
+traces/*
+training/*
