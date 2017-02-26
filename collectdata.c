@@ -25,19 +25,19 @@ struct syscall{
     int safe;
 };
 
-typedef struct proccessfilerecord{
+typedef struct proccess_file_record{
     char process[50];
     int safe;
 }proc;
 
 void printHelp();
 void generateForAllProcs();
-void generateForSpecificProcs(char *filename);
-void saveTrainingData(struct syscall *syscalls,int length);
+void generateForSpecificProcs(char *procs_filename,char *perf_filename,char *training_filename);
+void saveTrainingData(struct syscall *syscalls,int length, char *training_filename);
 int listContains(proc *proclist,int proclistsize,char process[],int *safe);
 
 int main(int argc,char *argv[]){
-    if(argc<2){
+    if(argc==1){
         printHelp();
         exit(0);
     }
@@ -46,8 +46,20 @@ int main(int argc,char *argv[]){
             if(strcmp(argv[2],"-allprocs")==0){
                 generateForAllProcs();
             }
-            else if(strcmp(argv[2],"-procsfile")==0){
-                generateForSpecificProcs(argv[3]);
+            else if(strcmp(argv[2],"-procs")==0){
+                if(strcmp(argv[4],"-i")==0){
+                    if(strcmp(argv[6],"-o")==0){
+                        generateForSpecificProcs(argv[3],argv[5],argv[7]); // procsfile, perffile, trainingfile
+                    }
+                    else{
+                        fprintf(stderr,"Invalid option \"%s\"\n",argv[6]);
+                        exit(1);
+                    }
+                }
+                else{
+                    fprintf(stderr,"Invalid option \"%s\"\n",argv[4]);
+                    exit(1);
+                }
             }
             else{
                 fprintf(stderr,"Invalid option \"%s\"\n",argv[2]);
@@ -71,12 +83,13 @@ void printHelp(){
     printf("Note: Run the program with administrator privileges\n");
     printf("Usage: collectdata options\n");
     printf("Options:\n");
-    // ./collectdata -training -allprocs (all procs safe)
-    // ./collectdata -training -procsfile filename (procs.list)
+    // ./collectdata -training -allprocs (all safe)
+    // ./collectdata -training -procs <filename> -i <filename> -o <filename>
 
     printf("\n");
 }
 
+// TO DO: Fix/Check this function
 void generateForAllProcs(){
     int i;
     int lines;
@@ -169,7 +182,7 @@ void generateForAllProcs(){
     }
 }
 
-void generateForSpecificProcs(char *filename){
+void generateForSpecificProcs(char *procs_filename,char *perf_filename,char *training_filename){
     int i;
     int line_cnt;
     int char_cnt;
@@ -177,52 +190,58 @@ void generateForSpecificProcs(char *filename){
     char temp[200];
     int temp_pid;
     int safe;
-    FILE *proclistfile;
-    FILE *perfFile;
-    proc *proclist;
-    int proclistsize;
+
+    FILE *procs_file;
+    proc *procs;
+    int procs_cnt;
+
+    FILE *perf_file;
     struct syscall *syscalls;
+    int perf_cnt;
 
-    /* List selected processes */
-    proclistfile=fopen(filename,"r");
-    if(proclistfile!=NULL){
-        // 1. Count lines of lines(processes in file)
-        line_cnt=0;
-        fgets(dummy,100,proclistfile); // Ignore first line - column names
-        while(fgets(dummy,100,proclistfile)!=NULL){
-            line_cnt++;
+    // Open procs file
+    procs_file=fopen(procs_filename,"r");
+    if(procs_file!=NULL){
+        // Read procs file
+        procs_cnt=0;
+        fgets(dummy,200,procs_file); // Ignore first line - column names
+        while(fgets(dummy,200,procs_file)!=NULL){
+            procs_cnt++;
         }
-        printf("#processes in file: %d\n",line_cnt);
-        proclistsize=line_cnt;
-        proclist=(proc*)malloc(proclistsize*sizeof(proc));
-        rewind(proclistfile);
-        // 2. Store processes of list
-        line_cnt=0;
-        while(fgets(dummy,500,proclistfile)!=NULL){
-            sscanf(dummy,"%s %d\n",proclist[line_cnt].process,&proclist[line_cnt].safe);
-            line_cnt++;
+        printf("#processes in file: %d\n",procs_cnt);
+        procs=(proc*)malloc(procs_cnt*sizeof(proc));
+        rewind(procs_file);
+        // Store procs
+        procs_cnt=0;
+        fgets(dummy,200,procs_file); // Ignore first line - column names
+        while(fgets(dummy,200,procs_file)!=NULL){
+            sscanf(dummy,"%s %d\n",procs[procs_cnt].process,&procs[procs_cnt].safe);
+            procs_cnt++;
         }
-        fclose(proclistfile);
+        fclose(procs_file);
 
-        /* List selected processes and related information */
-        // Needed?
-
-        /* Trace syscalls */
-        //system("sudo perf trace > perf.dat");
-        perfFile=fopen("apacheperf.dat","r");
-        if(perfFile!=NULL){
-            // 1. Count number of lines(syscalls)
-            line_cnt=0;
-            while(fgets(dummy,500,perfFile)!=NULL){
-                line_cnt++;
+        #ifdef DEBUG
+            int cnt;
+            for(cnt=0; cnt<procs_cnt; cnt++){
+                printf("[DEBUG] %s %d\n",procs[cnt].process,procs[cnt].safe);
             }
-            printf("#syscalls(before applying filter): %d\n",line_cnt);
-            syscalls=(struct syscall*)malloc(line_cnt*sizeof(struct syscall));
-            rewind(perfFile);
-            // 2. Store syscall info
+        #endif
+
+        // Open perf file
+        perf_file=fopen(perf_filename,"r");
+        if(perf_file!=NULL){
+            // Read perf file
+            perf_cnt=0;
+            while(fgets(dummy,500,perf_file)!=NULL){
+                perf_cnt++;
+            }
+            printf("#syscalls(before applying filter): %d\n",perf_cnt);
+            syscalls=(struct syscall*)malloc(perf_cnt*sizeof(struct syscall));
+            rewind(perf_file);
+            // Store syscalls
             i=0;
             line_cnt=0;
-            while(fgets(dummy,500,perfFile)!=NULL){
+            while(fgets(dummy,500,perf_file)!=NULL){
                 sscanf(dummy,"%*f %*c %*f %*s %s",temp);
                 // Split process and pid
                 char_cnt=0;
@@ -231,8 +250,8 @@ void generateForSpecificProcs(char *filename){
                 }
                 memcpy(temp+char_cnt,"\0",1);
                 temp_pid=atoi(temp+char_cnt);
-                // Check if process exists in file's list
-                if(listContains(proclist,proclistsize,temp,&safe)==1){
+                // Check if process exists in process list (apply filter)
+                if(listContains(procs,procs_cnt,temp,&safe)==1){
                     sscanf(dummy,"%f %*c %f %*s %*s %s",
                         &syscalls[i].timestamp,&syscalls[i].duration,
                         syscalls[i].syscall);
@@ -254,16 +273,16 @@ void generateForSpecificProcs(char *filename){
                 line_cnt++;
             }
             printf("#syscalls(after applying filter): %d\n",i);
-            fclose(perfFile);
-            saveTrainingData(syscalls,i);
+            fclose(perf_file);
+            saveTrainingData(syscalls,i,training_filename);
         }
         else{
-            fprintf(stderr,"Error opening file \"perf.dat\"\n");
+            fprintf(stderr,"Error opening file \"%s\"\n",perf_filename);
             exit(1);
         }
     }
     else{
-        fprintf(stderr,"Error opening file \"%s\"\n",filename);
+        fprintf(stderr,"Error opening file \"%s\"\n",procs_filename);
         exit(1);
     }
 }
@@ -280,21 +299,22 @@ int listContains(proc *proclist,int proclistsize,char process[],int *safe){
     return 0;
 }
 
-void saveTrainingData(struct syscall *syscalls,int length){
+void saveTrainingData(struct syscall *syscalls,int length,char *training_filename){
     int i;
-    FILE *output;
-    output=fopen("training.dat","w");
-    if(output!=NULL){
-        fprintf(output,"Timestamp\tDuration\tProcess\tpid\tSyscall\tSafe\n");
+    FILE *training_file;
+    training_file=fopen(training_filename,"w");
+    if(training_file!=NULL){
+        fprintf(training_file,"#Timestamp\tDuration\tProcess\tpid\tSyscall\tSafe\n");
         for(i=0; i<length; i++){
-            fprintf(output,"%f\t%f\t%s\t%d\t%s\t%d\n",syscalls[i].timestamp,syscalls[i].duration,
+            fprintf(training_file,"%f, %f, %s, %d, %s, %d\n",syscalls[i].timestamp,syscalls[i].duration,
                 syscalls[i].process,syscalls[i].pid,syscalls[i].syscall,syscalls[i].safe);
         }
-        fclose(output);
-        printf("Training set was saved in file \"training.dat\"\n");
+        fclose(training_file);
+        printf("Training set was saved in file \"%s\"\n",training_filename);
     }
     else{
-        fprintf(stderr,"Error opening file \"%s\"\n","training.dat");
+        fprintf(stderr,"Error opening file \"%s\"\n",training_filename);
         exit(1);
     }
 }
+

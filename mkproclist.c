@@ -65,7 +65,7 @@ void printHelp(){
     printf("Options:\n");
 
 
-    printf("This program depends on 'ps'");
+    printf("This program depends on 'ps'\n");
     printf("\n");
 }
 
@@ -107,7 +107,7 @@ void allProcsSafe(){
         // 3. Output file
         output=fopen("procs.list","w");
         if(output!=NULL){
-            fprintf(output,"CMD Safe\n");
+            fprintf(output,"#CMD Safe\n");
             for(i=0; i<cnt; i++){
                 fprintf(output,"%s %d\n",processes[i].cmd,1);
             }

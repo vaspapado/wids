@@ -28,6 +28,10 @@ mkproclist: mkproclist.c
 	$(CC) -o mkproclist mkproclist.c $(INCLUDES)
 
 collectdata: collectdata.c
+ifeq ($(DEBUG),true)
+	$(CC) -DDEBUG -o collectdata collectdata.c $(INCLUDES)
+else
 	$(CC) -o collectdata collectdata.c $(INCLUDES)
+endif
 
 

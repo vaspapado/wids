@@ -6,6 +6,7 @@ build: $(OBJECTS)
 	
 clean:
 	rm -f $(OBJECTS)
+	rm -f *.o *.key *.list *.dat
 
 # Comms
 
@@ -27,6 +28,10 @@ mkproclist: mkproclist.c
 	$(CC) -o mkproclist mkproclist.c $(INCLUDES)
 
 collectdata: collectdata.c
+ifeq ($(DEBUG),true)
+	$(CC) -DDEBUG -o collectdata collectdata.c $(INCLUDES)
+else
 	$(CC) -o collectdata collectdata.c $(INCLUDES)
+endif
 
 
