@@ -1,6 +1,6 @@
 CC 		= gcc
 INCLUDES 	= -I /home/vasilis/Desktop/wids
-OBJECTS		= broadcast monitor pskgen aes collectdata mkproclist
+OBJECTS		= broadcast monitor pskgen aes collectdata mkproclist gensequences
 
 build: $(OBJECTS)
 	
@@ -34,4 +34,6 @@ else
 	$(CC) -o collectdata collectdata.c $(INCLUDES)
 endif
 
+gensequences: gensequences.c
+	$(CC) -o gensequences gensequences.c $(INCLUDES)
 
