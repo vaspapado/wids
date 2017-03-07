@@ -6,7 +6,7 @@ build: $(OBJECTS)
 	
 clean:
 	rm -f $(OBJECTS)
-	rm -f *.o *.key *.list *.dat
+	rm -f *.o *.key *.dat
 
 # Comms
 

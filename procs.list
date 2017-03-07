@@ -1,4 +1,9 @@
 #CMD Safe
+mirai 0
+zenmap 0
+firefox 1
+codeblocks 1
+skype 1
 init 1
 kthreadd 1
 ksoftirqd/0 1

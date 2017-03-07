@@ -26,10 +26,13 @@ struct syscall{
     int pid;
     char syscall[400];
     int safe;
+    int val;
 };
 
 void printHelp();
 void generateSequences(char *in_filename, char *out_filename, int length);
+int listContains(char **syscall_list,int length,char *syscall);
+int getVal(char **syscall_list,int length,int *val,char *syscall);
 
 int main(int argc,char *argv[]){
     if(argc==1){
@@ -86,7 +89,6 @@ void generateSequences(char *in_filename, char *out_filename, int length){
         }
         printf("#syscalls: %d\n",(syscall_cnt));
         syscalls=(struct syscall*)malloc(syscall_cnt*sizeof(struct syscall));
-        rewind(in_file);
 
         syscall_cnt=0;
         fgets(dummy,500,in_file); // Ignore first line - column names
@@ -96,14 +98,57 @@ void generateSequences(char *in_filename, char *out_filename, int length){
         }
         fclose(in_file);
 
-        // 2. WRITE
+        // 2. Transform text to num
+        char **syscall_list;
+        int *val;
+        syscall_list=(char**)malloc(1000*sizeof(char*)); // for 1k different syscalls
+        for(i=0; i<1000; i++){
+            syscall_list[i]=(char*)malloc(100*sizeof(char)); // for 100 character syscalls
+        }
+        val=(int*)malloc(1000*sizeof(int));
+
+        //read list
+        FILE *syscall_list_file;
+        syscall_list_file=fopen("syscall.list","r");
+        int c=0;
+        while(fgets(dummy,200,syscall_list_file)!=NULL){
+            sscanf(dummy,"%s %d\n",syscall_list[c],&val[c]); // ?
+            c++;
+        }
+        rewind(syscall_list_file);
+
+        //add new syscalls
+
+        int list_cnt=c;
+        for(i=0; i<syscall_cnt; i++){
+            if(!listContains(syscall_list,list_cnt,syscalls[i].syscall)){
+                strcpy(syscall_list[list_cnt],syscalls[i].syscall);
+                val[list_cnt]=list_cnt;
+                list_cnt++;
+            }
+        }
+        printf("#unique syscalls: %d\n",(list_cnt));
+
+        //write list
+        //FILE *syscall_list_file; // syscall val
+        syscall_list_file=fopen("syscall.list","w");
+        for(i=0; i<list_cnt; i++){
+            fprintf(syscall_list_file,"%s %d\n",syscall_list[i],val[i]);
+        }
+        fclose(syscall_list_file);
+
+        for(i=0; i<syscall_cnt; i++){
+            syscalls[i].val=getVal(syscall_list,list_cnt,val,syscalls[i].syscall);
+        }
+
+        // 3. WRITE
         out_file=fopen(out_filename,"w");
         if(out_file!=NULL){
 
             for(i=0; i<syscall_cnt-length; i++){
 
                 for(j=0; j<length; j++){
-                    fprintf(out_file,"%s, ",syscalls[i].syscall);
+                    fprintf(out_file,"%d, ",syscalls[i+j].val);
                 }
                 fprintf(out_file,"%d\n",syscalls[i].safe);
 
@@ -120,4 +165,26 @@ void generateSequences(char *in_filename, char *out_filename, int length){
         fprintf(stderr,"Error opening file \"%s\"\n",in_filename);
         exit(1);
     }
+}
+
+int listContains(char **syscall_list,int length,char *syscall){
+    int i;
+    for(i=0; i<length; i++){
+        if(strcmp(syscall_list[i],syscall)==0){
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int getVal(char **syscall_list,int length,int *val,char *syscall){
+    int i;
+    for(i=0; i<length; i++){
+        if(strcmp(syscall_list[i],syscall)==0){
+            return val[i];
+        }
+    }
+    fprintf(stderr,"val for syscall not found\n");
+    exit(1);
+    return 0;
 }

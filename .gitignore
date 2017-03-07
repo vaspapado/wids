@@ -1,6 +1,5 @@
 *.o
 *.key
-*.list
 *.dat
 traces/*
 training/*
