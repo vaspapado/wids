@@ -87,6 +87,7 @@ void generateSequences(char *in_filename, char *out_filename, int length){
         while(fgets(dummy,200,in_file)!=NULL){
             syscall_cnt++;
         }
+        rewind(in_file);
         printf("#syscalls: %d\n",(syscall_cnt));
         syscalls=(struct syscall*)malloc(syscall_cnt*sizeof(struct syscall));
 
@@ -115,10 +116,9 @@ void generateSequences(char *in_filename, char *out_filename, int length){
             sscanf(dummy,"%s %d\n",syscall_list[c],&val[c]); // ?
             c++;
         }
-        rewind(syscall_list_file);
+        close(syscall_list_file);
 
         //add new syscalls
-
         int list_cnt=c;
         for(i=0; i<syscall_cnt; i++){
             if(!listContains(syscall_list,list_cnt,syscalls[i].syscall)){
